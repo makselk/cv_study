@@ -41,15 +41,15 @@ bool Telega::telegaSinus(const cv::Mat &background,
         if(new_pos.x < 0)
             new_pos.x = 0;
         /// Линия перемещения объекта
-        cv::line(trajectory_layer, new_pos, position, cv::Scalar(255,192,203), 2);
+        cv::line(trajectory_layer, new_pos, position, cv::Scalar(203, 192, 255), 2);
         /// Присвоение нового значения переменной позиции объекта
         position = new_pos;
         /// Выходное изображение
         cv::Mat output = background.clone();
         /// Расположение слоя траектории на главном фоне 
-        modelOnBackground(trajectory_layer, output);
+        drawOnBackground(trajectory_layer, output);
         /// Расположение модели на главном фоне
-        modelOnBackground(model, output, position);
+        drawOnBackground(model, output, position);
         /// Отображение полученного изображения
         cv::imshow("Telega", output);
         /// По нажатию клавиши 'x' закрыть окно
@@ -64,9 +64,9 @@ bool Telega::telegaSinus(const cv::Mat &background,
     return true;
 }
 
-void Telega::modelOnBackground(cv::Mat &model,
-                               cv::Mat &background,
-                               const cv::Point2i &position) {
+void Telega::drawOnBackground(cv::Mat &model,
+                              cv::Mat &background,
+                              const cv::Point2i &position) {
     /// Проверка на соответствие размерам
     if(model.rows > background.rows || model.cols > background.cols) {
         std::cout << "Model is bigger than background" << std::endl;

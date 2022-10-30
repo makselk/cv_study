@@ -9,6 +9,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(cv_laba_1 
 	main.cpp
-	src/telega.cpp)
+	src/telega.cpp
+	src/tank.cpp)
 	
 target_link_libraries(cv_laba_1 ${OpenCV_LIBS})

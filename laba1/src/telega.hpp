@@ -17,9 +17,9 @@ private:
                      cv::Point2i &position,
                      int amplitude,
                      float w);
-    void modelOnBackground(cv::Mat &model,
-                           cv::Mat &background, 
-                           const cv::Point2i &position = cv::Point2i(-1, -1));
+    void drawOnBackground(cv::Mat &model,
+                          cv::Mat &background, 
+                          const cv::Point2i &position = cv::Point2i(-1, -1));
 private:
     cv::Mat background;
     cv::Mat model;
