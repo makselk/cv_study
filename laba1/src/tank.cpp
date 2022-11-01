@@ -102,17 +102,6 @@ void Tank::run() {
     }
 }
 
-cv::Mat Tank::renderFrame() {
-    /// Делаем копию карты
-    cv::Mat output = map.clone();
-    /// Рисуем на ней танк
-    drawOnMap(tank_img[tank_orientation], output, tank_pos);
-    /// Рисуем все снаряды
-    for(auto &ball: balls)
-        drawOnMap(ball_img[ball.orientation], output, ball.position);
-    return output;
-}
-
 bool Tank::keyHandler() {
     int key = cv::waitKey(10);
     switch(key) {
@@ -208,6 +197,29 @@ void Tank::updateTank() {
     }
 }
 
+bool Tank::outOfMap(cv::Mat &map, cv::Mat &object, cv::Point2i &position) {
+    if(position.x < 0)
+        return true;
+    if(position.y < 0)
+        return true;
+    if(position.x + object.cols > map.cols)
+        return true;
+    if(position.y + object.rows > map.rows)
+        return true;
+    return false;
+}
+
+cv::Mat Tank::renderFrame() {
+    /// Делаем копию карты
+    cv::Mat output = map.clone();
+    /// Рисуем на ней танк
+    drawOnMap(tank_img[tank_orientation], output, tank_pos);
+    /// Рисуем все снаряды
+    for(auto &ball: balls)
+        drawOnMap(ball_img[ball.orientation], output, ball.position);
+    return output;
+}
+
 void Tank::drawOnMap(cv::Mat &object,
                      cv::Mat &map,
                      const cv::Point2i &position) {
@@ -220,16 +232,4 @@ void Tank::drawOnMap(cv::Mat &object,
             map.at<cv::Vec3b>(position.y + i, position.x + j) = object.at<cv::Vec3b>(i, j);
         }
     }
-}
-
-bool Tank::outOfMap(cv::Mat &map, cv::Mat &object, cv::Point2i &position) {
-    if(position.x < 0)
-        return true;
-    if(position.y < 0)
-        return true;
-    if(position.x + object.cols > map.cols)
-        return true;
-    if(position.y + object.rows > map.rows)
-        return true;
-    return false;
 }
