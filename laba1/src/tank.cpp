@@ -8,6 +8,7 @@ Ball::Ball(int orientation, cv::Point2i &position, int speed) {
 }
 
 void Ball::updatePosition() {
+    /// В зависимости от ориентации меняем положение
     switch (orientation) {
     case 0:
         position.y -= speed;
@@ -64,6 +65,7 @@ Tank::Tank(const std::string &map_file,
 
 void Tank::initTankModel(const std::string &tank_file) {
     tank_img[0] = cv::imread(tank_file);
+    /// Изменяем размер под нужный, делаем все варианты ориентаций
     cv::resize(tank_img[0], tank_img[0], cv::Size(50, 50));
     cv::rotate(tank_img[0], tank_img[1], cv::ROTATE_90_CLOCKWISE);
     cv::rotate(tank_img[0], tank_img[2], cv::ROTATE_180);
@@ -71,12 +73,15 @@ void Tank::initTankModel(const std::string &tank_file) {
 }
 
 void Tank::initBallModel(const std::string &ball_file) {
+    /// Если изображение не задано, делаем шарик
     if(ball_file == "_") {
         ball_img[0] = cv::Mat::zeros(cv::Size(30, 30), CV_8UC3);
         cv::circle(ball_img[0], cv::Point2i(15, 15), 15, cv::Scalar(203, 192, 255), -1);
-    } else {
+    }
+    /// Иначе подгружаем шарик из исходника 
+    else{
         ball_img[0] = cv::imread(ball_file);
-        cv::resize(ball_img[0], ball_img[0], cv::Size(30, 30));   
+        cv::resize(ball_img[0], ball_img[0], cv::Size(50, 50));   
     }
     cv::rotate(ball_img[0], ball_img[1], cv::ROTATE_90_CLOCKWISE);
     cv::rotate(ball_img[0], ball_img[2], cv::ROTATE_180);
@@ -84,10 +89,13 @@ void Tank::initBallModel(const std::string &ball_file) {
 }
 
 void Tank::run() {
+    /// Базовая позиция танка
     tank_pos = cv::Point2i(map.cols / 2 - tank_img[0].cols / 2,
                            map.rows / 2 - tank_img[0].rows / 2);
     while(keyHandler()) {
+        /// Обновляем положения снарядов
         updateBalls();
+        /// Обновляем положения танка
         updateTank();
         cv::Mat output = renderFrame();
         cv::imshow("Invalid Battle City", output);
@@ -95,8 +103,11 @@ void Tank::run() {
 }
 
 cv::Mat Tank::renderFrame() {
+    /// Делаем копию карты
     cv::Mat output = map.clone();
+    /// Рисуем на ней танк
     drawOnMap(tank_img[tank_orientation], output, tank_pos);
+    /// Рисуем все снаряды
     for(auto &ball: balls)
         drawOnMap(ball_img[ball.orientation], output, ball.position);
     return output;
@@ -105,27 +116,27 @@ cv::Mat Tank::renderFrame() {
 bool Tank::keyHandler() {
     int key = cv::waitKey(10);
     switch(key) {
-        case 'x':
+        case 'x': //закрыть
             return false;
-        case -1:
+        case -1: //ничего не было нажато
             return true;
-        case 81:
+        case 81: //стрелка влево
             tank_orientation = 3;
             tank_pos.x -= speed;
             break;
-        case 82:
+        case 82: //стрелка вверх
             tank_orientation = 0;
             tank_pos.y -= speed;
             break;
-        case 83:
+        case 83: //стрелка вправо
             tank_orientation = 1;
             tank_pos.x += speed;
             break;
-        case 84:
+        case 84: //стрелка вниз
             tank_orientation = 2;
             tank_pos.y += speed;
             break;
-        case 'q':
+        case 'q': //выстрел
             shotHandler();
             break;
         default:
@@ -135,6 +146,7 @@ bool Tank::keyHandler() {
 }
 
 void Tank::shotHandler() {
+    /// В зависимости от ориентации танка выбираем ориентация и положение снаряда
     cv::Point2i pos;
     switch(tank_orientation) {
         case 0:
@@ -156,12 +168,15 @@ void Tank::shotHandler() {
         default:
             break;
     }
-    balls.emplace_back(tank_orientation, pos, 5);
+    /// Добавляем объект снаряда в вектор
+    balls.emplace_back(tank_orientation, pos, balls_speed);
 }
 
 void Tank::updateBalls() {
+    /// Обновляем положения каждого снаярда
     for(auto &ball: balls)
         ball.updatePosition();
+    /// Проверка на выход за пределы карты
     for(int i = 0; i != balls.size(); ++i) {
         if(outOfMap(map, ball_img[balls[i].orientation], balls[i].position)) {
             balls.erase(balls.begin() + i);
@@ -171,9 +186,10 @@ void Tank::updateBalls() {
 }
 
 void Tank::updateTank() {
+    /// Проверка на выход за границы карты
     if(!outOfMap(map, tank_img[tank_orientation], tank_pos))
         return;
-
+    /// Если выходит за пределы карты, делаем шаг назад
     switch(tank_orientation) {
         case 0:
             tank_pos.y += speed;
