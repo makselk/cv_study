@@ -1,4 +1,5 @@
 #include "filters.hpp"
+#include "opencv2/intensity_transform.hpp"
 #include <chrono>
 
 
@@ -53,6 +54,25 @@ void FILTERS::customBoxFilter(cv::Mat &src, cv::Mat &dst, int kernel_size) {
     dst = tmp;
 }
 
+void FILTERS::customLaplace(cv::Mat &src, cv::Mat &dst) {
+    // Инициализация выходного изображения
+    dst = cv::Mat(src.rows, src.cols, CV_8UC1);
+    for(int y = 1; y != src.rows - 1; ++y) {
+        for(int x = 1; x != src.cols - 1; ++x) {
+            // Вычисление суммы
+            int sum = 0;
+            sum += src.at<uint8_t>(y, x + 1);
+            sum += src.at<uint8_t>(y, x - 1);
+            sum += src.at<uint8_t>(y + 1, x);
+            sum += src.at<uint8_t>(y - 1, x);
+            sum -= 4 * static_cast<int>(src.at<uint8_t>(y, x));
+
+            // Приведение int к uint8_t (обрезаем все, что выше 255 и ниже 0)
+            dst.at<uint8_t>(y, x) = cv::saturate_cast<uint8_t>(sum);
+        }
+    }
+}
+
 void FILTERS::calculateSimilarity(cv::Mat &src1, cv::Mat &src2) {
     // Проверка размеров изображений
     if(src1.rows != src2.rows || src1.cols != src2.cols) {
@@ -83,6 +103,50 @@ void FILTERS::calculateSimilarity(cv::Mat &src1, cv::Mat &src2) {
     // Вывод результата
     std::cout << "Similarity = " << similarity << "%" << std::endl;
     cv::imshow("Difference", difference);
+}
+
+void FILTERS::unsharpMaskBox(cv::Mat &src, cv::Mat &dst, int kernel_size, int sharp) {
+    cv::Mat box;
+    cv::Mat difference;
+    cv::blur(src, box, cv::Size(kernel_size, kernel_size));
+    cv::subtract(src, box, difference);
+
+    dst = cv::Mat(src.rows, src.cols, CV_8UC1);
+    cv::MatIterator_<uint8_t> it_src = src.begin<uint8_t>();
+    cv::MatIterator_<uint8_t> it_dst = dst.begin<uint8_t>();
+    cv::MatIterator_<uint8_t> it_dif = difference.begin<uint8_t>();
+
+    for( ; it_src != src.end<uint8_t>(); ++it_src, ++it_dst, ++it_dif) {
+        int val = static_cast<int>(*it_src) + sharp * static_cast<int>(*it_dif);
+        if(val > 255)
+            *it_dst = 255;
+        else
+            *it_dst = static_cast<uint8_t>(val);
+    }
+}
+
+
+void FILTERS::unsharpMaskGauss(cv::Mat &src, cv::Mat &dst, int kernel_size, int sharp) {
+    cv::Mat gauss;
+    cv::Mat difference;
+    cv::GaussianBlur(src, gauss, cv::Size(kernel_size, kernel_size), kernel_size - 2);
+    cv::subtract(src, gauss, difference);
+
+    dst = cv::Mat(src.rows, src.cols, CV_8UC1);
+    cv::MatIterator_<uint8_t> it_src = src.begin<uint8_t>();
+    cv::MatIterator_<uint8_t> it_dst = dst.begin<uint8_t>();
+    cv::MatIterator_<uint8_t> it_dif = difference.begin<uint8_t>();
+
+    for( ; it_src != src.end<uint8_t>(); ++it_src, ++it_dst, ++it_dif) {
+        int val = static_cast<int>(*it_src) + sharp * static_cast<int>(*it_dif);
+        if(val > 255)
+            *it_dst = 255;
+        else
+            *it_dst = static_cast<uint8_t>(val);
+    }
+
+    //g(x)=(1−α)f(x) + αg(x)
+    //cv::addWeighted();
 }
 
 void FILTERS::boxFilterPart1_3(const std::string &path, int kernel_size) {
@@ -117,6 +181,65 @@ void FILTERS::boxFilterPart1_3(const std::string &path, int kernel_size) {
 }
 
 void FILTERS::gaussAndBoxComapre4(const std::string &path, int kernel_size) {
+    // Инициализация исходных изображений
     cv::Mat src = cv::imread(path);
+    cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+    cv::Mat gauss;
+    cv::Mat box;
+    cv::Mat difference;
+
+    // Применение фильтров к исходнику
+    cv::GaussianBlur(src, gauss, cv::Size(kernel_size, kernel_size), kernel_size - 2);
+    cv::blur(src, box, cv::Size(kernel_size, kernel_size));
+
+    // Вычисление разностного изображения
+    cv::subtract(gauss, box, difference);
+
+    // Логарифмическая трансформация для удобства просмотра
+    cv::intensity_transform::logTransform(difference, difference);
+
+    // Визуализация
+    cv::imshow("Source", src);
+    cv::imshow("Gaussian Blur", gauss);
+    cv::imshow("Box Filter", box);
+    cv::imshow("Difference", difference);
+    cv::waitKey(0);
+}
+
+void FILTERS::unsharpMask5(const std::string &path, int kernel_size, int sharp) {
+    // Инициализация исходных изображений
+    cv::Mat src = cv::imread(path);
+    cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+    cv::Mat sharp_gauss;
+    cv::Mat sharp_box;
+    cv::Mat difference;
+
+    // Применение фильтров к исходнику
+    FILTERS::unsharpMaskGauss(src, sharp_gauss, kernel_size, sharp);
+    FILTERS::unsharpMaskBox(src, sharp_box, kernel_size, sharp);
     
+    // Вычисление разностного изображения
+    cv::subtract(sharp_gauss, sharp_box, difference);
+
+    // Логарифмическая трансформация для удобства просмотра
+    cv::intensity_transform::logTransform(difference, difference);
+    
+    // Визуализация
+    cv::imshow("Source", src);
+    cv::imshow("Sharp Gaussian", sharp_gauss);
+    cv::imshow("Sharp Box", sharp_box);
+    cv::imshow("Difference", difference);
+    cv::waitKey(0);
+}
+
+void FILTERS::laplace6(const std::string &path) {
+    // Инициализация исходного изображений
+    cv::Mat src = cv::imread(path);
+    cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+
+    cv::Mat dst;
+    FILTERS::customLaplace(src, dst);
+
+    cv::imshow("Laplace", dst);
+    cv::waitKey(0);
 }
