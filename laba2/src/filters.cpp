@@ -300,3 +300,10 @@ void FILTERS::unsharpLaplace7(const std::string &path, int kernel_size, int shar
     cv::imshow("Sharp Gauss", sharp_gauss);
     cv::waitKey(0);
 }
+
+void FILTERS::launchAll(const std::string &path, int kernel_size, int sharp) {
+    FILTERS::boxFilterPart1_3(path, kernel_size);
+    FILTERS::gaussAndBoxComapre4(path, kernel_size);
+    FILTERS::unsharpMask5(path, kernel_size, sharp);
+    FILTERS::unsharpLaplace7(path, kernel_size, sharp);
+}
