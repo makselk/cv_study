@@ -17,6 +17,8 @@ namespace FILTERS {
     void unsharpMask5(const std::string &path, int kernel_size, int sharp);
     void laplace6(const std::string &path);
     void unsharpLaplace7(const std::string &path, int kernel_size, int sharp);
+
+    void launchAll(const std::string &path, int kernel_size, int sharp);
 };
 
 
