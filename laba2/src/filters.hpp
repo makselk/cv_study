@@ -10,12 +10,13 @@ namespace FILTERS {
     void calculateSimilarity(cv::Mat &src1, cv::Mat &src2);
     void unsharpMaskBox(cv::Mat &src, cv::Mat &dst, int kernel_size, int sharp);
     void unsharpMaskGauss(cv::Mat &src, cv::Mat &dst, int kernel_size, int sharp);
+    void unsharpMaskLaplace(cv::Mat &src, cv::Mat &dst, int sharp);
 
     void boxFilterPart1_3(const std::string &path, int kernel_size);
     void gaussAndBoxComapre4(const std::string &path, int kernel_size);
     void unsharpMask5(const std::string &path, int kernel_size, int sharp);
     void laplace6(const std::string &path);
-    void unsharpMaskLaplace7(const std::string &path, int kernel_size, int sharp);
+    void unsharpLaplace7(const std::string &path, int kernel_size, int sharp);
 };
 
 

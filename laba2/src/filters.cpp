@@ -17,7 +17,8 @@ void FILTERS::customBoxFilter(cv::Mat &src, cv::Mat &dst, int kernel_size) {
 
     // Создание промежуточного изображения, чтобы не повредить исходное
     // в случае, если src и dst одинаковые
-    cv::Mat tmp = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
+    //cv::Mat tmp = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
+    cv::Mat tmp = src.clone();
 
     // Инициализация положения ОИ
     cv::Rect roi_position(0, 0, kernel_size, kernel_size);
@@ -30,7 +31,7 @@ void FILTERS::customBoxFilter(cv::Mat &src, cv::Mat &dst, int kernel_size) {
             roi_position.y = y;
             cv::Mat roi = src(roi_position);
 
-            // Итераторы для прохода по ядру и ОИ
+            // Инициализация итераторов
             cv::MatIterator_<uint8_t> it_roi = roi.begin<uint8_t>();
             cv::MatIterator_<uint8_t> it_kernel = kernel.begin<uint8_t>();
 
@@ -38,7 +39,7 @@ void FILTERS::customBoxFilter(cv::Mat &src, cv::Mat &dst, int kernel_size) {
             int weight = 0;
 
             // Свертка ядра и ОИ
-            for(; it_roi != roi.end<uint8_t>(); ++it_roi, ++it_kernel)
+            for( ; it_roi != roi.end<uint8_t>(); ++it_roi, ++it_kernel)
                 weight += static_cast<int>(*it_kernel) * static_cast<int>(*it_roi);
             
             // Нормировка значения
@@ -56,7 +57,7 @@ void FILTERS::customBoxFilter(cv::Mat &src, cv::Mat &dst, int kernel_size) {
 
 void FILTERS::customLaplace(cv::Mat &src, cv::Mat &dst) {
     // Инициализация выходного изображения
-    dst = cv::Mat(src.rows, src.cols, CV_8UC1);
+    dst = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
     for(int y = 1; y != src.rows - 1; ++y) {
         for(int x = 1; x != src.cols - 1; ++x) {
             // Вычисление суммы
@@ -92,7 +93,7 @@ void FILTERS::calculateSimilarity(cv::Mat &src1, cv::Mat &src2) {
 
     // Счетчик совпадающих пикселей
     int similar = 0;
-    for(; it1 != src1.end<uint8_t>(); ++it1, ++it2, ++it_dif)
+    for( ; it1 != src1.end<uint8_t>(); ++it1, ++it2, ++it_dif)
         if(*it1 == *it2) ++similar;
         else *it_dif = 255;
 
@@ -106,47 +107,78 @@ void FILTERS::calculateSimilarity(cv::Mat &src1, cv::Mat &src2) {
 }
 
 void FILTERS::unsharpMaskBox(cv::Mat &src, cv::Mat &dst, int kernel_size, int sharp) {
+    // Подготовка промежуточных изображений
     cv::Mat box;
     cv::Mat difference;
-    cv::blur(src, box, cv::Size(kernel_size, kernel_size));
-    cv::subtract(src, box, difference);
 
+    // Сглаживание исходного изображения
+    cv::blur(src, box, cv::Size(kernel_size, kernel_size));
+    // Вычитание сглаженного из исходного
+    cv::subtract(src, box, difference);
+    cv::imshow("box_difference", difference);
+
+    // Изменение размера выходного изображения
     dst = cv::Mat(src.rows, src.cols, CV_8UC1);
+
+    // Итераторы для прохода по изображениям
     cv::MatIterator_<uint8_t> it_src = src.begin<uint8_t>();
     cv::MatIterator_<uint8_t> it_dst = dst.begin<uint8_t>();
     cv::MatIterator_<uint8_t> it_dif = difference.begin<uint8_t>();
 
     for( ; it_src != src.end<uint8_t>(); ++it_src, ++it_dst, ++it_dif) {
+        // Поиск нового значения
         int val = static_cast<int>(*it_src) + sharp * static_cast<int>(*it_dif);
-        if(val > 255)
-            *it_dst = 255;
-        else
-            *it_dst = static_cast<uint8_t>(val);
+        // Приведение int к uint8_t (обрезаем все, что выше 255 и ниже 0)
+        *it_dst = cv::saturate_cast<uint8_t>(val);
     }
 }
 
-
 void FILTERS::unsharpMaskGauss(cv::Mat &src, cv::Mat &dst, int kernel_size, int sharp) {
+    // Подготовка промежуточных изображений
     cv::Mat gauss;
     cv::Mat difference;
-    cv::GaussianBlur(src, gauss, cv::Size(kernel_size, kernel_size), kernel_size - 2);
-    cv::subtract(src, gauss, difference);
 
+    // Сглаживание исходного изображения
+    cv::GaussianBlur(src, gauss, cv::Size(kernel_size, kernel_size), kernel_size - 2);
+    // Вычитание сглаженного из исходного
+    cv::subtract(src, gauss, difference);
+    cv::imshow("gauss_difference", difference);
+
+    // Изменение размера выходного изображения
     dst = cv::Mat(src.rows, src.cols, CV_8UC1);
+
+    // Итераторы для прохода по изображениям
     cv::MatIterator_<uint8_t> it_src = src.begin<uint8_t>();
     cv::MatIterator_<uint8_t> it_dst = dst.begin<uint8_t>();
     cv::MatIterator_<uint8_t> it_dif = difference.begin<uint8_t>();
 
     for( ; it_src != src.end<uint8_t>(); ++it_src, ++it_dst, ++it_dif) {
+        // Поиск нового значения
         int val = static_cast<int>(*it_src) + sharp * static_cast<int>(*it_dif);
-        if(val > 255)
-            *it_dst = 255;
-        else
-            *it_dst = static_cast<uint8_t>(val);
+        // Приведение int к uint8_t (обрезаем все, что выше 255 и ниже 0)
+        *it_dst = cv::saturate_cast<uint8_t>(val);
     }
 
     //g(x)=(1−α)f(x) + αg(x)
     //cv::addWeighted();
+}
+
+void FILTERS::unsharpMaskLaplace(cv::Mat &src, cv::Mat &dst, int sharp) {
+    cv::Mat laplace;
+    FILTERS::customLaplace(src, laplace);
+    cv::imshow("laplace_difference", laplace);
+
+    dst = cv::Mat(src.rows, src.cols, CV_8UC1);
+    cv::MatIterator_<uint8_t> it_src = src.begin<uint8_t>();
+    cv::MatIterator_<uint8_t> it_lap = laplace.begin<uint8_t>();
+    cv::MatIterator_<uint8_t> it_dst = dst.begin<uint8_t>();
+
+    for( ; it_src != src.end<uint8_t>(); ++it_src, ++it_dst, ++it_lap) {
+        // Поиск нового значения
+        int val = static_cast<int>(*it_src) - sharp * static_cast<int>(*it_lap);
+        // Приведение int к uint8_t (обрезаем все, что выше 255 и ниже 0)
+        *it_dst = cv::saturate_cast<uint8_t>(val);
+    }
 }
 
 void FILTERS::boxFilterPart1_3(const std::string &path, int kernel_size) {
@@ -170,13 +202,14 @@ void FILTERS::boxFilterPart1_3(const std::string &path, int kernel_size) {
     std::cout << "Custom function time: " << custom_duration.count() << " milliseconds" << std::endl;
     std::cout << "Built in function time: " << built_in_duration.count() << " microseconds" << std::endl;
 
-    // Вычисление схожести полученных изображений
-    FILTERS::calculateSimilarity(custom, built_in);
-
     // Вывод результатов
     cv::imshow("Source", src);
     cv::imshow("Custom", custom);
     cv::imshow("Built in", built_in);
+
+    // Вычисление схожести полученных изображений
+    FILTERS::calculateSimilarity(custom, built_in);
+
     cv::waitKey(0);
 }
 
@@ -237,9 +270,33 @@ void FILTERS::laplace6(const std::string &path) {
     cv::Mat src = cv::imread(path);
     cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
 
+    // Вычисление отфильтрованного изображения
     cv::Mat dst;
     FILTERS::customLaplace(src, dst);
 
+    // Визуализация
+    cv::imshow("Source", src);
     cv::imshow("Laplace", dst);
+    cv::waitKey(0);
+}
+
+void FILTERS::unsharpLaplace7(const std::string &path, int kernel_size, int sharp) {
+    // Инициализация исходного изображения
+    cv::Mat src = cv::imread(path);
+    cv::cvtColor(src, src, cv::COLOR_BGR2GRAY);
+
+    // Вычисление отфильтрованных изображений
+    cv::Mat sharp_laplace;
+    cv::Mat sharp_box;
+    cv::Mat sharp_gauss;
+    FILTERS::unsharpMaskLaplace(src, sharp_laplace, sharp);
+    FILTERS::unsharpMaskBox(src, sharp_box, kernel_size, sharp);
+    FILTERS::unsharpMaskGauss(src, sharp_gauss, kernel_size, sharp);
+    
+    // Визуализация
+    cv::imshow("Source", src);
+    cv::imshow("Sharp Laplace", sharp_laplace);
+    cv::imshow("Sharp Box", sharp_box);
+    cv::imshow("Sharp Gauss", sharp_gauss);
     cv::waitKey(0);
 }
