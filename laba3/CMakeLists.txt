@@ -11,6 +11,7 @@ add_executable(cv_laba_3
 	#begun.cpp
 	main.cpp
 	src/teplovisor.cpp
-	src/robots.cpp)
+	src/robots.cpp
+	src/gk.cpp)
 	
 target_link_libraries(cv_laba_3 ${OpenCV_LIBS})

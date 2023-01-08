@@ -115,7 +115,6 @@ namespace {
                 cv::inRange(src, cv::Scalar(0, 40, 0), cv::Scalar(10, 255, 255), mask1);
                 cv::inRange(src, cv::Scalar(170, 40, 0), cv::Scalar(180, 255, 255), mask2);
                 cv::bitwise_or(mask1, mask2, mask);
-                cv::imshow("mask", mask);
                 break;
             case GREEN:
                 cv::inRange(src, cv::Scalar(60, 40, 0), cv::Scalar(78, 255, 255), mask);
@@ -150,10 +149,6 @@ namespace {
             if(cv::matchShapes(template_contour[0], contour, cv::CONTOURS_MATCH_I2, 0) < 0.07)
                 contours.emplace_back(contour);
         }
-        cv::Mat img = cv::Mat::zeros(src.rows, src.cols, CV_8UC1);
-        cv::polylines(img, contours, true, cv::Scalar(255));
-        //cv::imshow("img", img);
-        //cv::waitKey(0);
     }
 
     void findNearestRobot(std::vector<std::vector<cv::Point>> &contours,
