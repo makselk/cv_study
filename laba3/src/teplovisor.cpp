@@ -1,4 +1,5 @@
 #include "teplovisor.hpp"
+#include <filesystem>
 
 
 void TEPLOVISOR::grayPipelineVideo(const std::string &path) {
@@ -31,12 +32,22 @@ void TEPLOVISOR::grayPipelineImage(const std::string &path) {
     cv::waitKey(0);
 }
 
-void TEPLOVISOR::bgrPipeline(const std::string &path) {
+void TEPLOVISOR::bgrPipelineImage(const std::string &path) {
     cv::Mat src = cv::imread(path);
     cv::Mat dst;
     bgrOneTarget(src, dst);
     cv::imshow("dst", dst);
     cv::waitKey(0);
+}
+
+void TEPLOVISOR::bgrPipelineDirectory(const std::string &path) {
+    std::vector<std::string> paths;
+    for(const auto& entry: std::filesystem::recursive_directory_iterator(path)) {
+        if(!entry.is_directory())
+            paths.emplace_back(entry.path().string());
+    }
+    for(auto &img_path: paths)
+        bgrPipelineImage(img_path);
 }
 
 namespace {

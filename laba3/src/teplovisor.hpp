@@ -7,7 +7,8 @@
 namespace TEPLOVISOR {
     void grayPipelineVideo(const std::string &path);
     void grayPipelineImage(const std::string &path);
-    void bgrPipeline(const std::string &path);
+    void bgrPipelineImage(const std::string &path);
+    void bgrPipelineDirectory(const std::string &path);
 }
 
 namespace {
