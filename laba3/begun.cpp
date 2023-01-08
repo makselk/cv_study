@@ -19,7 +19,7 @@ void onChange(int, void*) {
 }
 
 int main() {
-    src = cv::imread("../img/roboti/roi_robotov.jpg");
+    src = cv::imread("../img/roboti/roi_robotov_1.jpg");
     cv::namedWindow("Thresh", cv::WINDOW_AUTOSIZE);
     cv::createTrackbar("hue low", "Thresh", &hue_low, 255, onChange);
     cv::createTrackbar("hue high", "Thresh", &hue_high, 255, onChange);

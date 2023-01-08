@@ -7,16 +7,23 @@
 typedef enum {
     RED,
     GREEN,
-    BLUE
+    BLUE,
+    BLACK
 } COLORS;
 
 namespace {
+    void pipeline(cv::Mat &src, cv::Mat &dst);
     void findLampPos(cv::Mat &src, cv::Point &pt);
-    void findRobots(cv::Mat &src, cv::Mat &dst, COLORS color);
+    void findRobots(cv::Mat &src, std::vector<std::vector<cv::Point>> &contours, COLORS color);
+    void findNearestRobot(std::vector<std::vector<cv::Point>> &contours,
+                          cv::Point &point, 
+                          cv::Point &nearest_robot_pt);
+    void placeCross(cv::Mat &src, cv::Point &center, int size, int width, COLORS color);
 };
 
 namespace ROBOTS {
-    void robotsPipeline(const std::string &path);
+    void pipelineImage(const std::string &path);
+    void pipelineVideo(const std::string &path);
 };
 
 
