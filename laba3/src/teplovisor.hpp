@@ -3,16 +3,17 @@
 
 #include "opencv4/opencv2/opencv.hpp"
 
-void teplovisor_gray_largest(cv::Mat &src, cv::Mat &dst);
-void teplovisor_gray_largest(cv::Mat &src,
-                            cv::Mat &dst,
-                            int cross_size,
-                            int cross_width);
-void teplovisor_bgr(cv::Mat &src, cv::Mat &dst);
-void teplovisor_bgr_pipeline(const std::string &path);
-void teplovisor_gray_largest_pipeline(const std::string &path);
-void teplovisor_gray_largest_pipeline(const std::string &path,
-                                      int cross_size, 
-                                      int cross_width);
+
+namespace TEPLOVISOR {
+    void grayPipelineVideo(const std::string &path);
+    void grayPipelineImage(const std::string &path);
+    void bgrPipeline(const std::string &path);
+}
+
+namespace {
+    void grayOneTarget(cv::Mat &src, cv::Mat &dst);
+    void grayThreeTargets(cv::Mat &src, cv::Mat &dst);
+    void bgrOneTarget(cv::Mat &src, cv::Mat &dst);
+}
 
 #endif //TEPLOVISOR_HPP
