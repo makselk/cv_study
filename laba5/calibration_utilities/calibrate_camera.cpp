@@ -79,8 +79,6 @@ const char* keys  =
 
 
 int main(int argc, char *argv[]) {
-    //CommandLineParser parser(argc, argv, keys);
-
     int markersX = 7;
     int markersY = 10;
     int markerLength = 50;

@@ -11,6 +11,9 @@ add_executable(cv_laba_5
 	main.cpp
 	src/cube_utility.cpp
 	src/custom_utility.cpp
+	#calibration_utilities/calibrate_camera.cpp
+	#calibration_utilities/create_board.cpp
+	#calibration_utilities/create_tag.cpp
 )
 	
 target_link_libraries(cv_laba_5 ${OpenCV_LIBS})
