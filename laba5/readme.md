@@ -37,3 +37,5 @@
 ![Пример работы программы](readme_img/example1.png)
 
 ![Пример работы программы](readme_img/example2.png)
+
+https://user-images.githubusercontent.com/90328421/216841558-f98f2566-5fee-47ec-8db4-ff32ea9bf4d2.mp4
