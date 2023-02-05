@@ -72,6 +72,7 @@ namespace {
         remote_vector.push_back(remote_distance);
         // На пустом cv::Mat рисуем поверхность по точкам
         cv::fillPoly(base_layer, base, cv::Scalar(0,0,255));
+        cv::polylines(base_layer, base, true, cv::Scalar(1,1,1), 3);
         layers_map[remote_distance] = &base_layer;
 
         // Верхняя поверхность
@@ -85,6 +86,7 @@ namespace {
         remote_distance /= 4;
         remote_vector.push_back(remote_distance);
         cv::fillPoly(cap_layer, cap, cv::Scalar(0,128,255));
+        cv::polylines(cap_layer, cap, true, cv::Scalar(1,1,1), 3);
         layers_map[remote_distance] = &cap_layer;
 
         // Фронтальная поверхность
@@ -99,6 +101,7 @@ namespace {
         remote_distance /= 4;
         remote_vector.push_back(remote_distance);
         cv::fillPoly(front_layer, front, cv::Scalar(0,255,255));
+        cv::polylines(front_layer, front, true, cv::Scalar(1,1,1), 3);
         layers_map[remote_distance] = &front_layer;
 
         // Задняя поверхнсоть
@@ -113,6 +116,7 @@ namespace {
         remote_distance /= 4;
         remote_vector.push_back(remote_distance);
         cv::fillPoly(back_layer, back, cv::Scalar(0,255,0));
+        cv::polylines(back_layer, back, true, cv::Scalar(1,1,1), 3);
         layers_map[remote_distance] = &back_layer;
 
         // Левая поверхность
@@ -127,6 +131,7 @@ namespace {
         remote_distance /= 4;
         remote_vector.push_back(remote_distance);
         cv::fillPoly(left_layer, left, cv::Scalar(255,0,255));
+        cv::polylines(left_layer, left, true, cv::Scalar(1,1,1), 3);
         layers_map[remote_distance] = &left_layer;
 
         // Правая поверхность
@@ -141,6 +146,7 @@ namespace {
         remote_distance /= 4;
         remote_vector.push_back(remote_distance);
         cv::fillPoly(right_layer, right, cv::Scalar(255,0,0));
+        cv::polylines(right_layer, right, true, cv::Scalar(1,1,1), 3);
         layers_map[remote_distance] = &right_layer;
 
         // Сортируем вектор удаленности по убыванию
@@ -152,7 +158,7 @@ namespace {
             drawOver(img, *layers_map[elem]);
 
             // Полупрозрачные стороны
-            //cv::addWeighted(img, 1, *layers_map[elem], 1, 0, img);
+            //cv::addWeighted(img, 1, *layers_map[elem], 0.5, 0, img);
 
             //cv::polylines(img, *remote_map[elem], true, cv::Scalar(0,0,0), 3);
         }
