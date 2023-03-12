@@ -1,5 +1,6 @@
 #include "pipeline.h"
 #include "custom_fourier.h"
+#include <chrono>
 
 
 cv::Mat PIPELINE::readImage(const std::string& path) {
@@ -78,10 +79,20 @@ double PIPELINE::verifyImages(cv::Mat& a, cv::Mat& b) {
 void PIPELINE::compareDFT(const std::string& path) {
     cv::Mat input = PIPELINE::readImage(path);
     // DFT opencv
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     cv::Mat opencv_fourier;
     cv::dft(input, opencv_fourier);
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    int64_t opencv_time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    
     // Custom fourier
+    begin = std::chrono::steady_clock::now();
     cv::Mat custom_fourier = CUSTOM_FOURIER::dft(input);
+    end = std::chrono::steady_clock::now();
+    int64_t custom_time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    std::cout << "OpenCV time:" << opencv_time << "[µs]" << std::endl;
+    std::cout << "Custom time:" << custom_time << "[µs]" << std::endl;
+    
     // Magnitude
     cv::Mat opencv_magnitude = PIPELINE::countMagnitude(opencv_fourier);
     cv::Mat custom_magnitude = PIPELINE::countMagnitude(custom_fourier);
@@ -90,9 +101,11 @@ void PIPELINE::compareDFT(const std::string& path) {
     // Свапаем квадранты для красивого просмотра
     cv::Mat opencv_swapped = PIPELINE::swapQuadrants(opencv_magnitude);
     cv::Mat custom_swapped = PIPELINE::swapQuadrants(custom_magnitude);
+
     // Обратное преобразование
     cv::Mat custom_fourier_reverse = CUSTOM_FOURIER::dft(custom_fourier, true);
     cv::Mat reverse_magnitude = PIPELINE::countMagnitude(custom_fourier_reverse);
+    
     // Показ
     cv::imshow("opencv_fourier", opencv_swapped);
     cv::imshow("custom_fourier", custom_swapped);
