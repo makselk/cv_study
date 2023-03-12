@@ -1,4 +1,6 @@
 #include "pipeline.h"
+#include "custom_fourier.h"
+
 
 cv::Mat PIPELINE::readImage(const std::string& path) {
     // Считываем в чб
@@ -21,10 +23,11 @@ cv::Mat PIPELINE::readImage(const std::string& path) {
 
 cv::Mat PIPELINE::countMagnitude(cv::Mat& complex_image) {
     // Контейнер под разбитое на каналы комплексное изображение
-    cv::Mat planes[] = {cv::Mat::zeros(complex_image.size(), CV_32F),
-                        cv::Mat::zeros(complex_image.size(), CV_32F)};
+    cv::Mat planes[] = {cv::Mat(complex_image.size(), CV_32FC1),
+                        cv::Mat(complex_image.size(), CV_32FC1)};
     // Разбиваем на одноканальные изображения
     cv::split(complex_image, planes);
+    
     // Абсолютное значение комплексных значений
     cv::Mat mag;
     cv::magnitude(planes[0], planes[1], mag);
@@ -56,4 +59,43 @@ cv::Mat PIPELINE::swapQuadrants(cv::Mat& img) {
     q2.copyTo(q1);
     tmp.copyTo(q2);
     return out;
+}
+
+double PIPELINE::verifyImages(cv::Mat& a, cv::Mat& b) {
+    int mistakes = 0;
+    for(int i = 0; i != a.rows; ++i) {
+        for(int j = 0; j != a.cols; ++j) {
+            if(a.at<float>(i,j) - b.at<float>(i,j) > 0.01) {
+                ++mistakes;
+            }
+        }
+    }
+    double result = 1 - (double)mistakes / (double)(a.rows * a.cols);
+    std::cout << "Overlap: " << result << std::endl;
+    return result;
+}
+
+void PIPELINE::compareDFT(const std::string& path) {
+    cv::Mat input = PIPELINE::readImage(path);
+    // DFT opencv
+    cv::Mat opencv_fourier;
+    cv::dft(input, opencv_fourier);
+    // Custom fourier
+    cv::Mat custom_fourier = CUSTOM_FOURIER::dft(input);
+    // Magnitude
+    cv::Mat opencv_magnitude = PIPELINE::countMagnitude(opencv_fourier);
+    cv::Mat custom_magnitude = PIPELINE::countMagnitude(custom_fourier);
+    // Сравнение совпадения
+    verifyImages(opencv_magnitude, custom_magnitude);
+    // Свапаем квадранты для красивого просмотра
+    cv::Mat opencv_swapped = PIPELINE::swapQuadrants(opencv_magnitude);
+    cv::Mat custom_swapped = PIPELINE::swapQuadrants(custom_magnitude);
+    // Обратное преобразование
+    cv::Mat custom_fourier_reverse = CUSTOM_FOURIER::dft(custom_fourier, true);
+    cv::Mat reverse_magnitude = PIPELINE::countMagnitude(custom_fourier_reverse);
+    // Показ
+    cv::imshow("opencv_fourier", opencv_swapped);
+    cv::imshow("custom_fourier", custom_swapped);
+    cv::imshow("custom_fourier_reverse", reverse_magnitude);
+    cv::waitKey(0);
 }

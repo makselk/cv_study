@@ -10,6 +10,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 add_executable(cv_laba_4
 	main.cpp
 	src/pipeline.cpp
+	src/custom_fourier.cpp
 )
 	
 target_link_libraries(cv_laba_4 ${OpenCV_LIBS})
