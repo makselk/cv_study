@@ -261,3 +261,60 @@ void PIPELINE::startConvolveDFT(const std::string& path) {
     convolveDFT(img, KERNEL::SOBEL_X);
     convolveDFT(img, KERNEL::SOBEL_Y);
 }
+
+
+void PIPELINE::cutSpectrum(cv::Mat& img, double w) {
+    // Параметры для обрезания частот
+    int radius = img.rows < img.cols ? img.rows * w / 2 : img.cols * w / 2;
+    cv::Point center(img.cols / 2, img.rows / 2);
+
+    // Перевод в комплексное представление и преобразование фурье
+    cv::Mat img_complex = toCvComplex(img);
+    cv::Mat img_fourier;
+    cv::dft(img_complex, img_fourier, cv::DFT_COMPLEX_OUTPUT);
+    
+    // Красивый спектр
+    cv::Mat spectrum = swapQuadrants(img_fourier);
+    // Матрицы, в которых останутся верхние и нижние частоты
+    cv::Mat spectrum_upper = spectrum.clone();
+    cv::Mat spectrum_lower;
+    // Обнуляем центральные значения - убираем низкие частоты (оставляем высокие)
+    cv::circle(spectrum_upper, center, radius, cv::Scalar::all(0.0), -1);
+    // Исключающее или, чтобы убрать высокие частоты (оставить нижние)
+    cv::bitwise_xor(spectrum, spectrum_upper, spectrum_lower);
+    
+    // Вычисляем магнитуду
+    cv::Mat magnitude = countMagnitude(spectrum);
+    // Производим те же операции, что и со спектром, чтоб не уплывало среднее значение интенсивности
+    cv::Mat magnitude_upper = magnitude.clone();
+    cv::Mat magnitude_lower;
+    cv::circle(magnitude_upper, center, radius, cv::Scalar::all(0.0), -1);
+    cv::bitwise_xor(magnitude, magnitude_upper, magnitude_lower);
+
+    // Возвращаем квадранты в исходное положение
+    spectrum_upper = swapQuadrants(spectrum_upper);
+    spectrum_lower = swapQuadrants(spectrum_lower);
+
+    // Обратное преобразование
+    cv::Mat inverse_upper, inverse_lower, out_upper, out_lower;
+    cv::idft(spectrum_upper, inverse_upper, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
+    cv::idft(spectrum_lower, inverse_lower, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
+    inverse_upper.convertTo(out_upper, CV_8U);
+    inverse_lower.convertTo(out_lower, CV_8U);
+
+    // Показ всего
+    cv::imshow("Original", img);
+    cv::imshow("Out upper", out_upper);
+    cv::imshow("Out lower", out_lower);
+    cv::imshow("Magnitude original", magnitude);
+    cv::imshow("Magnitude upper", magnitude_upper);
+    cv::imshow("Magnitude lower", magnitude_lower);
+    cv::waitKey(0);
+
+}
+
+void PIPELINE::startCutSpectrum(const std::string& path, double radius) {
+    cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+    cv::resize(img, img, cv::Size(550, 350));
+    cutSpectrum(img, radius);
+}

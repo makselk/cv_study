@@ -39,7 +39,6 @@ namespace PIPELINE {
     void directoryCompareDFT(const std::string& path);
 
 //////////////////////////////////////////////////////////////////////////
-
     typedef enum {
         BOX,
         LAPLACE,
@@ -64,6 +63,13 @@ namespace PIPELINE {
     // Производит свертку изображения по пути с ядрами,
     // представленными в PIPELINE::KERNEL
     void startConvolveDFT(const std::string& path);
+
+////////////////////////////////////////////////////////////////////////////
+
+    // Обрезает спектр кругом
+    // radius определяет ширину круга (0 - min; 1 - max) 
+    void cutSpectrum(cv::Mat& img, double radius);
+    void startCutSpectrum(const std::string& path, double radius);
 }
 
 #endif //PIPELINE_H
