@@ -10,6 +10,14 @@ namespace PIPELINE {
     // 2 канал - нулевая матрица под мнимые значения
     cv::Mat readImage(const std::string& path);
 
+    // Возвращает двуканальное изображение (512х512)
+    // 1 канал - значения интенсивности пикселей чб изображения
+    // 2 канал - нулевая матрица под мнимые значения
+    cv::Mat readImagePow2(const std::string& path);
+
+    // Переводит изображение в CV_32FC2 (Im+Re)
+    cv::Mat toCvComplex(cv::Mat& input);
+
     // Вычисляет одноканальное изображение - 
     // модуль двухканального комплексного
     cv::Mat countMagnitude(cv::Mat& complex_image);
@@ -26,6 +34,36 @@ namespace PIPELINE {
 
     // Сравнивает преобразование фурье в лоб и функция в опенсв
     void compareDFT(const std::string& path);
+
+    // Для всех изображений в директории
+    void directoryCompareDFT(const std::string& path);
+
+//////////////////////////////////////////////////////////////////////////
+
+    typedef enum {
+        BOX,
+        LAPLACE,
+        SOBEL_X,
+        SOBEL_Y
+    } KERNEL;
+
+    // Инициализация ядра и изображения в комплексном виде нужного размера
+    void initConvolveDFT(cv::Mat& img, 
+                         KERNEL filter,
+                         cv::Mat& img_complex,
+                         cv::Mat& kernel_complex);
+
+    // Обратное преобразование 2д спектра фурье для выполнения свертки
+    cv::Mat reverseDFT(cv::Mat& spectrum,
+                       cv::Mat& base_img,
+                       KERNEL filter);
+
+    // Производит свертку с помощью перобразования фурье
+    cv::Mat convolveDFT(cv::Mat& img, KERNEL kernel);
+
+    // Производит свертку изображения по пути с ядрами,
+    // представленными в PIPELINE::KERNEL
+    void startConvolveDFT(const std::string& path);
 }
 
 #endif //PIPELINE_H

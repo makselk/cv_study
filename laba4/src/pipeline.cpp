@@ -1,6 +1,21 @@
 #include "pipeline.h"
 #include "custom_fourier.h"
 #include <chrono>
+#include <filesystem>
+
+
+static float box_kernel[3][3] = {{1, 1, 1},
+                                 {1, 1, 1},
+                                 {1, 1, 1}};
+static float laplace_kernel[3][3] = {{0, 1, 0},
+                                     {1,-4, 1},
+                                     {0, 1, 0}};
+static float sobel_kernel_x[3][3] = {{-1, 0, 1},
+                                     {-2, 0, 2},
+                                     {-1, 0, 1}};
+static float sobel_kernel_y[3][3] = {{ 1, 2, 1},
+                                     { 0, 0, 0},
+                                     {-1,-2,-1}};
 
 
 cv::Mat PIPELINE::readImage(const std::string& path) {
@@ -8,6 +23,7 @@ cv::Mat PIPELINE::readImage(const std::string& path) {
     cv::Mat input = cv::imread(path, cv::IMREAD_GRAYSCALE);
     // Подгон размеров, удобных для преобразования фурье
     cv::Mat padded;
+    // Оптимальные размеры для встроенного преобразования
     int optimal_rows = cv::getOptimalDFTSize(input.rows);
     int optimal_cols = cv::getOptimalDFTSize(input.cols);
     cv::copyMakeBorder(input, padded,
@@ -15,11 +31,29 @@ cv::Mat PIPELINE::readImage(const std::string& path) {
                        0, input.cols - optimal_cols, 
                        cv::BORDER_CONSTANT, cv::Scalar::all(0));
     // Переход в комплексное пространство (двумерный массив - реальная + мнимая части)
-    cv::Mat planes[] = {cv::Mat_<float>(padded), cv::Mat::zeros(padded.size(), CV_32F)};
-    // Пакуем в двухканальное изображение
-    cv::Mat complex_input;
-    cv::merge(planes, 2, complex_input);
+    cv::Mat complex_input = toCvComplex(padded);
     return complex_input;
+}
+
+cv::Mat PIPELINE::readImagePow2(const std::string& path) {
+    // Считываем в чб
+    cv::Mat input = cv::imread(path, cv::IMREAD_GRAYSCALE);
+    // Подгон размеров, удобных для преобразования фурье
+    cv::Mat padded;
+    // Это оптимальные размеры для кастомной функции с radix-2 (степени двойки)
+    cv::resize(input, padded, cv::Size(512, 512));
+    // Переход в комплексное пространство (двумерный массив - реальная + мнимая части)
+    cv::Mat complex_input = toCvComplex(padded);
+    return complex_input;
+}
+
+cv::Mat PIPELINE::toCvComplex(cv::Mat& input) {
+    // Переход в комплексное пространство (двумерный массив - реальная + мнимая части)
+    cv::Mat planes[] = {cv::Mat_<float>(input), cv::Mat::zeros(input.size(), CV_32F)};
+    // Пакуем в двухканальное изображение
+    cv::Mat complex;
+    cv::merge(planes, 2, complex);
+    return complex;
 }
 
 cv::Mat PIPELINE::countMagnitude(cv::Mat& complex_image) {
@@ -71,44 +105,159 @@ double PIPELINE::verifyImages(cv::Mat& a, cv::Mat& b) {
             }
         }
     }
-    double result = 1 - (double)mistakes / (double)(a.rows * a.cols);
-    std::cout << "Overlap: " << result << std::endl;
+    double result = 1.0 - (double)mistakes / (double)(a.rows * a.cols);
     return result;
 }
 
 void PIPELINE::compareDFT(const std::string& path) {
-    cv::Mat input = PIPELINE::readImage(path);
+    cv::Mat input = PIPELINE::readImagePow2(path);
     // DFT opencv
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     cv::Mat opencv_fourier;
     cv::dft(input, opencv_fourier);
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    int64_t opencv_time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+    int64_t opencv_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
     
-    // Custom fourier
+    // Custom naive fourier
     begin = std::chrono::steady_clock::now();
-    cv::Mat custom_fourier = CUSTOM_FOURIER::dft(input);
+    cv::Mat naive_fourier = CUSTOM_FOURIER::dft(input);
     end = std::chrono::steady_clock::now();
-    int64_t custom_time = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    std::cout << "OpenCV time:" << opencv_time << "[µs]" << std::endl;
-    std::cout << "Custom time:" << custom_time << "[µs]" << std::endl;
+    int64_t naive_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+    // Custom cooley-turkey
+    begin = std::chrono::steady_clock::now();
+    cv::Mat cooley_fourier = CUSTOM_FOURIER::fft(input);
+    end = std::chrono::steady_clock::now();
+    int64_t cooley_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+    std::cout << "OpenCV time:" << opencv_time << "[ms]" << std::endl;
+    std::cout << "Naive time :" << naive_time << "[ms]" << std::endl;
+    std::cout << "Cooley time:" << cooley_time << "[ms]" << std::endl;
     
     // Magnitude
     cv::Mat opencv_magnitude = PIPELINE::countMagnitude(opencv_fourier);
-    cv::Mat custom_magnitude = PIPELINE::countMagnitude(custom_fourier);
-    // Сравнение совпадения
-    verifyImages(opencv_magnitude, custom_magnitude);
+    cv::Mat naive_magnitude = PIPELINE::countMagnitude(naive_fourier);
+    cv::Mat cooley_magnitude = PIPELINE::countMagnitude(cooley_fourier);
+
+    // Сравнение совпадения 
+    double ocv_naive = verifyImages(opencv_magnitude, naive_magnitude);
+    double ocv_cooley = verifyImages(opencv_magnitude, cooley_magnitude);
+    std::cout << "Overlap opencv/naive: " << (double)ocv_naive << std::endl;
+    std::cout << "Overlap opencv/cooley: " << (double)ocv_cooley << std::endl;
+
     // Свапаем квадранты для красивого просмотра
     cv::Mat opencv_swapped = PIPELINE::swapQuadrants(opencv_magnitude);
-    cv::Mat custom_swapped = PIPELINE::swapQuadrants(custom_magnitude);
+    cv::Mat naive_swapped = PIPELINE::swapQuadrants(naive_magnitude);
+    cv::Mat cooley_swapped = PIPELINE::swapQuadrants(cooley_magnitude);
 
     // Обратное преобразование
-    cv::Mat custom_fourier_reverse = CUSTOM_FOURIER::dft(custom_fourier, true);
-    cv::Mat reverse_magnitude = PIPELINE::countMagnitude(custom_fourier_reverse);
+    cv::Mat naive_reverse = CUSTOM_FOURIER::dft(naive_fourier, true);
+    cv::Mat reverse_magnitude = PIPELINE::countMagnitude(naive_reverse);
     
     // Показ
-    cv::imshow("opencv_fourier", opencv_swapped);
-    cv::imshow("custom_fourier", custom_swapped);
-    cv::imshow("custom_fourier_reverse", reverse_magnitude);
+    cv::imshow("opencv_fourier", opencv_magnitude);
+    cv::imshow("naive_fourier", naive_magnitude);
+    cv::imshow("cooley_fourier", cooley_magnitude);
+    cv::imshow("naive_fourier_reverse", reverse_magnitude);
     cv::waitKey(0);
+}
+
+void PIPELINE::directoryCompareDFT(const std::string& path) {
+    std::vector<std::string> paths;
+    for(const auto& entry: std::filesystem::recursive_directory_iterator(path)) {
+        if(!entry.is_directory())
+            paths.emplace_back(entry.path().string());
+    }
+    for(auto &img_path: paths)
+        compareDFT(img_path);
+}
+
+void PIPELINE::initConvolveDFT(cv::Mat& img, 
+                               KERNEL filter,
+                               cv::Mat& img_complex,
+                               cv::Mat& kernel_complex) {
+    // Инициализируем ядро
+    cv::Mat kernel;
+    switch(filter) {
+        case BOX:
+            kernel = cv::Mat(3,3,CV_32F,&box_kernel);
+            break;
+        case LAPLACE:
+            kernel = cv::Mat(3,3,CV_32F,&laplace_kernel);
+            break;
+        case SOBEL_X:
+            kernel = cv::Mat(3,3,CV_32F,&sobel_kernel_x);
+            break;
+        case SOBEL_Y:
+            kernel = cv::Mat(3,3,CV_32F,&sobel_kernel_y);
+            break;
+    }
+    // Приводим к общему размеру для выполнения свертки
+    cv::Size common_size = img.size() + kernel.size();
+    cv::Mat img_ = cv::Mat::zeros(common_size, img.type());
+    cv::Mat kernel_ = cv::Mat::zeros(common_size, kernel.type());
+    
+    // Размещаем исходники в верхнем левом углу
+    img.copyTo(img_(cv::Rect(0, 0, img.cols, img.rows)));
+    kernel.copyTo(kernel_(cv::Rect(0, 0, kernel.cols, kernel.rows)));
+
+    // Переход в комплексное пространство
+    img_complex = toCvComplex(img_);
+    kernel_complex = toCvComplex(kernel_);
+}
+
+cv::Mat PIPELINE::reverseDFT(cv::Mat& spectrum,
+                             cv::Mat& base_img,
+                             KERNEL filter) {   
+    // Обратное преобразование сразу в вещественные значения
+    cv::Mat inverse;
+    cv::idft(spectrum, inverse, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
+    // Обрезаем до исходного размера
+    cv::Mat inverse_ = inverse(cv::Rect(1,1, base_img.cols, base_img.rows)).clone();
+    // Ответвление при работе с box fliter
+    if(filter == KERNEL::BOX) {
+        cv::normalize(inverse_, inverse_, 0, 1, cv::NORM_MINMAX);
+        return inverse_;
+    }
+    // Перевод в 8-битное изображение
+    cv::Mat out;
+    inverse_.convertTo(out, CV_8U);
+    return out;
+}
+
+cv::Mat PIPELINE::convolveDFT(cv::Mat& img, KERNEL filter) {
+    // Инициализация ядра и изображения в комплексном виде нужного размера
+    cv::Mat img_complex, kernel_complex;
+    initConvolveDFT(img, filter, img_complex, kernel_complex);
+
+    // Преобразование фурье для изображения и ядра
+    cv::Mat img_f, kernel_f;
+    cv::dft(img_complex, img_f, cv::DFT_COMPLEX_OUTPUT);
+    cv::dft(kernel_complex, kernel_f, cv::DFT_COMPLEX_OUTPUT);
+
+    cv::Mat img_magn = countMagnitude(img_f);
+    cv::Mat kernel_magn = countMagnitude(kernel_f);
+    cv::Mat img_magn_swapped = swapQuadrants(img_magn);
+    cv::Mat kernel_magn_swapped = swapQuadrants(kernel_magn);
+
+    // Свертка
+    cv::Mat conv_f;
+    cv::mulSpectrums(img_f, kernel_f, conv_f, 0);
+
+    // Обратное преобразование в пригодный для просмтра вид
+    cv::Mat out = reverseDFT(conv_f, img, filter);
+    cv::imshow("Image magnitude", img_magn_swapped);
+    cv::imshow("Kernel magnitude", kernel_magn_swapped);
+    cv::imshow("Convolved", out);
+    cv::waitKey(0);
+
+    return out;
+}
+
+void PIPELINE::startConvolveDFT(const std::string& path) {
+    cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+    convolveDFT(img, KERNEL::BOX);
+    convolveDFT(img, KERNEL::LAPLACE);
+    convolveDFT(img, KERNEL::SOBEL_X);
+    convolveDFT(img, KERNEL::SOBEL_Y);
 }

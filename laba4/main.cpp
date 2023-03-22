@@ -2,6 +2,8 @@
 
 
 int main() {
-    PIPELINE::compareDFT("../img/billy.jpeg");
+    //PIPELINE::directoryCompareDFT("../img");
+    PIPELINE::startConvolveDFT("../img/billy.png");
+    
     return 0;
 }
