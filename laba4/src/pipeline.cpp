@@ -173,6 +173,8 @@ void PIPELINE::directoryCompareDFT(const std::string& path) {
         compareDFT(img_path);
 }
 
+///////////////////////////////////////////////////////////////////////////////////
+
 void PIPELINE::initConvolveDFT(cv::Mat& img, 
                                KERNEL filter,
                                cv::Mat& img_complex,
@@ -264,6 +266,7 @@ void PIPELINE::startConvolveDFT(const std::string& path) {
     convolveDFT(img, KERNEL::SOBEL_Y);
 }
 
+////////////////////////////////////////////////////////////////////////////////
 
 void PIPELINE::cutSpectrum(cv::Mat& img, double w) {
     // Параметры для обрезания частот
@@ -319,4 +322,89 @@ void PIPELINE::startCutSpectrum(const std::string& path, double radius) {
     cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
     cv::resize(img, img, cv::Size(550, 350));
     cutSpectrum(img, radius);
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+
+void PIPELINE::startCorelateLicencePlates(const std::string& plates_dir,
+                                          const std::string& templates_dir) {
+    std::vector<std::string> plates_paths;
+    std::vector<std::string> templates_paths;
+    for(const auto& entry: std::filesystem::recursive_directory_iterator(plates_dir)) {
+        if(!entry.is_directory())
+            plates_paths.emplace_back(entry.path().string());
+    }
+    for(const auto& entry: std::filesystem::recursive_directory_iterator(templates_dir)) {
+        if(!entry.is_directory())
+            templates_paths.emplace_back(entry.path().string());
+    }
+
+    for(auto &plate: plates_paths) {
+        for(auto &temp: templates_paths)
+        correlationLicencePlates(plate, temp);
+    }
+}
+
+void PIPELINE::correlationLicencePlates(const std::string& plate_path,
+                                        const std::string& template_path) {
+    // Чтение номера и шаблона символа
+    cv::Mat plate = cv::imread(plate_path, cv::IMREAD_GRAYSCALE);
+    cv::Mat temp = cv::imread(template_path, cv::IMREAD_GRAYSCALE);
+
+    // Перевод в комплексное представление и сопоставление размеров
+    cv::Mat plate_complex, temp_complex;
+    initCorrelationDFT(plate, temp, plate_complex, temp_complex);
+
+    // Преобразование фурье
+    cv::Mat plate_fourier, temp_fourier;
+    cv::dft(plate_complex, plate_fourier);
+    cv::dft(temp_complex, temp_fourier);
+
+    // Корреляция
+    cv::Mat cor_fourier;
+    cv::mulSpectrums(plate_fourier, temp_fourier, cor_fourier, 1);
+
+    // Обратное преобразование
+    cv::Mat cor_result;
+    cv::idft(cor_fourier, cor_result, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
+
+    // Восстанавливаем размеры (обрезаем)
+    restoreSize(cor_fourier, plate);
+
+    // Нормализация, чтоб было видно
+    cv::normalize(cor_result, cor_result, 0.f, 1.f, cv::NORM_MINMAX);
+
+    // Пороговая фильтрация по "небольшому числу"
+    cv::Mat result_thresh;
+    cv::threshold(cor_result, result_thresh, 0.99f, 1.0f, cv::THRESH_BINARY);
+
+    // Показ
+    cv::imshow("Plate", plate);
+    cv::imshow("Symbol", temp);
+    cv::imshow("Mul", cor_result);
+    cv::imshow("Result", result_thresh);
+    cv::waitKey(0);
+}
+
+void PIPELINE::initCorrelationDFT(cv::Mat& plate,
+                                  cv::Mat& temp,
+                                  cv::Mat& plate_complex,
+                                  cv::Mat& temp_complex) {
+    // Приводим к общему размеру для выполнения свертки
+    cv::Size common_size = plate.size() + temp.size();
+    cv::Mat plate_ = cv::Mat::zeros(common_size, plate.type());
+    cv::Mat temp_ = cv::Mat::zeros(common_size, temp.type());
+    
+    // Размещаем исходники в верхнем левом углу
+    plate.copyTo(plate_(cv::Rect(0, 0, plate.cols, plate.rows)));
+    temp.copyTo(temp_(cv::Rect(0, 0, temp.cols, temp.rows)));
+
+    // Переход в комплексное пространство
+    plate_complex = toCvComplex(plate_);
+    temp_complex = toCvComplex(temp_);
+}
+
+void PIPELINE::restoreSize(cv::Mat& result, cv::Mat& src) {
+    cv::Mat result_ = result(cv::Rect(0,0, src.cols, src.rows)).clone();
+    result = result_;
 }

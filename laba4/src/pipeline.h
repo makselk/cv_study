@@ -70,6 +70,18 @@ namespace PIPELINE {
     // radius определяет ширину круга (0 - min; 1 - max) 
     void cutSpectrum(cv::Mat& img, double radius);
     void startCutSpectrum(const std::string& path, double radius);
+
+////////////////////////////////////////////////////////////////////////////
+
+    void startCorelateLicencePlates(const std::string& plates_dir,
+                                    const std::string& templates_dir);
+    void correlationLicencePlates(const std::string& plate_path,
+                                  const std::string& template_path);
+    void initCorrelationDFT(cv::Mat& plate,
+                            cv::Mat& temp,
+                            cv::Mat& plate_complex,
+                            cv::Mat& temp_complex);
+    void restoreSize(cv::Mat& result, cv::Mat& src);
 }
 
 #endif //PIPELINE_H
