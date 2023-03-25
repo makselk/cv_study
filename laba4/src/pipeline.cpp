@@ -42,6 +42,7 @@ cv::Mat PIPELINE::readImagePow2(const std::string& path) {
     cv::Mat padded;
     // Это оптимальные размеры для кастомной функции с radix-2 (степени двойки)
     cv::resize(input, padded, cv::Size(512, 512));
+    cv::imshow("original",padded);
     // Переход в комплексное пространство (двумерный массив - реальная + мнимая части)
     cv::Mat complex_input = toCvComplex(padded);
     return complex_input;
