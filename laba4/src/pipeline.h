@@ -52,7 +52,7 @@ namespace PIPELINE {
                          cv::Mat& img_complex,
                          cv::Mat& kernel_complex);
 
-    // Обратное преобразование 2д спектра фурье для выполнения свертки
+    // Обратное преобразование 2д спектра фурье
     cv::Mat reverseDFT(cv::Mat& spectrum,
                        cv::Mat& base_img,
                        KERNEL filter);

@@ -257,6 +257,7 @@ cv::Mat PIPELINE::convolveDFT(cv::Mat& img, KERNEL filter) {
 
 void PIPELINE::startConvolveDFT(const std::string& path) {
     cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
+    cv::resize(img, img, cv::Size(img.cols / 2, img.rows / 2));
     convolveDFT(img, KERNEL::BOX);
     convolveDFT(img, KERNEL::LAPLACE);
     convolveDFT(img, KERNEL::SOBEL_X);
