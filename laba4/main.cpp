@@ -2,8 +2,8 @@
 
 
 int main() {
-    //PIPELINE::directoryCompareDFT("../img");
+    PIPELINE::directoryCompareDFT("../img");
     //PIPELINE::startConvolveDFT("../img/van.png");
-    PIPELINE::startCutSpectrum("../img/billy.jpeg", 0.3);
+    //PIPELINE::startCutSpectrum("../img/billy.jpeg", 0.3);
     return 0;
 }

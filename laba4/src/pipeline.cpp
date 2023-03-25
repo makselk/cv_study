@@ -155,9 +155,9 @@ void PIPELINE::compareDFT(const std::string& path) {
     cv::Mat reverse_magnitude = PIPELINE::countMagnitude(naive_reverse);
     
     // Показ
-    cv::imshow("opencv_fourier", opencv_magnitude);
-    cv::imshow("naive_fourier", naive_magnitude);
-    cv::imshow("cooley_fourier", cooley_magnitude);
+    cv::imshow("opencv_fourier", opencv_swapped);
+    cv::imshow("naive_fourier", naive_swapped);
+    cv::imshow("cooley_fourier", cooley_swapped);
     cv::imshow("naive_fourier_reverse", reverse_magnitude);
     cv::waitKey(0);
 }

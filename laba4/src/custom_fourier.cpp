@@ -16,7 +16,7 @@ namespace {
         return out;
     }
     
-    // Перевод из комплексного типа в CV_32FC1
+    // Перевод из комплексного типа в CV_32FC2
     cv::Mat convertFromComplex(cv::Mat_<cv::Complex<float>>& input) {
         cv::Mat out(input.rows, input.cols, CV_32FC2);
         for(int i = 0; i != out.rows; ++i) {
