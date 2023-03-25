@@ -73,14 +73,19 @@ namespace PIPELINE {
 
 ////////////////////////////////////////////////////////////////////////////
 
+    // Запускает процесс выполнения корреляции каждого изображения номера
+    // из директории plates_dir с шаблоном символа из директории templates_dir
     void startCorelateLicencePlates(const std::string& plates_dir,
                                     const std::string& templates_dir);
+    // Выполняет корреляцию двух изображений
     void correlationLicencePlates(const std::string& plate_path,
                                   const std::string& template_path);
+    // Инициализирует изображения необходимого размера со значениями комплексного типа 
     void initCorrelationDFT(cv::Mat& plate,
                             cv::Mat& temp,
                             cv::Mat& plate_complex,
                             cv::Mat& temp_complex);
+    // Восстанавливает исходный размер номера
     void restoreSize(cv::Mat& result, cv::Mat& src);
 }
 
