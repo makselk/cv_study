@@ -194,70 +194,26 @@ cv::Mat CUSTOM_FOURIER::fft(cv::Mat& input) {
     cv::Mat_<cv::Complex<float>> img = convertToComplex(input);
 
     // Проход по строкам
-    cv::Mat_<cv::Complex<float>> rows_image = convertTo1D(img, true);
-    cooley_turkey(rows_image);
-    cv::Mat_<cv::Complex<float>> output = convertTo2D(rows_image, true, img.rows, img.cols);
+    //cv::Mat_<cv::Complex<float>> rows_image = convertTo1D(img, true);
+    //cooley_turkey(rows_image);
+    //cv::Mat_<cv::Complex<float>> output = convertTo2D(rows_image, true, img.rows, img.cols);
+
+    // Преобразование по строкам
+    for(int i = 0; i != img.rows; ++i) {
+        cv::Mat_<cv::Complex<float>> row = img.row(i);
+        cooley_turkey(row);
+        img.row(i) = row;
+    }
+    // Преобразование по столбцам
+    cv::transpose(img, img);
+    for(int i = 0; i != img.rows; ++i) {
+        cv::Mat_<cv::Complex<float>> row = img.row(i);
+        cooley_turkey(row);
+        img.row(i) = row;
+    }
+    // Возвращаем ориентацию
+    cv::transpose(img, img);
 
     // Возврат к исходному типу
-    return convertFromComplex(output);
-}
-
-cv::Mat CUSTOM_FOURIER::fft2(cv::Mat& src) {
-    int r = src.rows;
-    int c = src.cols;
-    src.convertTo(src, CV_32FC1);
-    cv::Mat dst;
-    dst.create(r, c, CV_32FC2);
-    for(int i = 0; i < r; i++) {
-        for(int j = 0; j < c; j++) {
-            dst.at<cv::Vec2f>(i,j)[0] = src.at<float>(i,j);
-            dst.at<cv::Vec2f>(i,j)[1] = 0.0;
-        }
-    }
-    int log_r = log2(r);
-    int log_c = log2(c);
-    for(int i = 0; i < r; i++) {
-        for(int j = 0; j < c; j++) {
-            int rp = i;
-            int cp = j;
-            for(int k = 0; k < log_c; k++) {
-                int new_cp = 0;
-                if(cp & (1<<k)) {
-                    new_cp |= 1<<(log_c-k-1);
-                }
-                cp = new_cp;
-            }
-            for(int k = 0; k < log_r; k++) {
-                int new_rp = 0;
-                if(rp & (1<<k)) {
-                    new_rp |= 1<<(log_r-k-1);
-                }
-                rp = new_rp;
-            }
-            if(rp < i) {
-                cv::Vec2f temp = dst.at<cv::Vec2f>(i,j);
-                dst.at<cv::Vec2f>(i,j) = dst.at<cv::Vec2f>(rp,cp);
-                dst.at<cv::Vec2f>(rp,cp) = temp;
-            }
-        }
-    }
-    cv::Mat_<cv::Complex<float>> out(dst.rows, dst.cols);
-    for(int n = 2; n <= r; n<<=1) {
-        for(int i = 0; i < r; i+=n) {
-            int half_n = n>>1;
-            for(int j = 0; j < half_n; j++) {
-                float rp = cos(2*M_PI*j/n);
-                float ip = -sin(2*M_PI*j/n);
-                cv::Complex<float> w(rp,ip);
-                cv::Vec2f u_ = dst.at<cv::Vec2f>(i+j+half_n,0);
-                cv::Complex<float> u(u_.val[0], u_.val[1]);
-                u = u * w;
-                cv::Vec2f x_ = dst.at<cv::Vec2f>(i+j,0);
-                cv::Complex<float> x(x_.val[0], x_.val[1]);
-                out.at<cv::Complex<float>>(i+j+half_n,0) = x - u;
-                out.at<cv::Complex<float>>(i+j,0) = x + u;
-            }
-        }
-    }
-    return convertFromComplex(out);
+    return convertFromComplex(img);
 }
