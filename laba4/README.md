@@ -75,3 +75,4 @@
 ![Пример работы программы](readme_img/example9_0.png)
 ![Пример работы программы](readme_img/example9_1.png)
 ![Пример работы программы](readme_img/example9_2.png)
+![Пример работы программы](readme_img/example9_3.png)

@@ -75,6 +75,20 @@ cv::Mat PIPELINE::countMagnitude(cv::Mat& complex_image) {
     return mag;
 }
 
+cv::Mat PIPELINE::reverseComplexToReal(cv::Mat& complex_image) {
+    // Контейнер под разбитое на каналы комплексное изображение
+    cv::Mat planes[] = {cv::Mat(complex_image.size(), CV_32FC1),
+                        cv::Mat(complex_image.size(), CV_32FC1)};
+    // Разбиваем на одноканальные изображения
+    cv::split(complex_image, planes);
+    // Абсолютное значение комплексных значений
+    cv::Mat mag;
+    cv::magnitude(planes[0], planes[1], mag);
+    // Нормализация значений между 0 и 1, для визуального различия
+    cv::normalize(mag, mag, 0, 1, cv::NORM_MINMAX);
+    return mag;
+}
+
 cv::Mat PIPELINE::swapQuadrants(cv::Mat& img) {
     cv::Mat out = img.clone();
     // Середины изображения
@@ -153,13 +167,13 @@ void PIPELINE::compareDFT(const std::string& path) {
 
     // Обратное преобразование
     cv::Mat naive_reverse = CUSTOM_FOURIER::dft(naive_fourier, true);
-    cv::Mat reverse_magnitude = PIPELINE::countMagnitude(naive_reverse);
+    cv::Mat reverse_image = PIPELINE::reverseComplexToReal(naive_reverse);
     
     // Показ
     cv::imshow("opencv_fourier", opencv_swapped);
     cv::imshow("naive_fourier", naive_swapped);
     cv::imshow("cooley_fourier", cooley_swapped);
-    cv::imshow("naive_fourier_reverse", reverse_magnitude);
+    cv::imshow("naive_fourier_reverse", reverse_image);
     cv::waitKey(0);
 }
 
@@ -362,14 +376,14 @@ void PIPELINE::correlationLicencePlates(const std::string& plate_path,
 
     // Корреляция
     cv::Mat cor_fourier;
-    cv::mulSpectrums(plate_fourier, temp_fourier, cor_fourier, 1);
+    cv::mulSpectrums(plate_fourier, temp_fourier, cor_fourier, 0, true);
 
     // Обратное преобразование
     cv::Mat cor_result;
     cv::idft(cor_fourier, cor_result, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
 
     // Восстанавливаем размеры (обрезаем)
-    restoreSize(cor_fourier, plate);
+    restoreSize(cor_result, plate);
 
     // Нормализация, чтоб было видно
     cv::normalize(cor_result, cor_result, 0.f, 1.f, cv::NORM_MINMAX);
