@@ -81,9 +81,11 @@ namespace PIPELINE {
     // из директории plates_dir с шаблоном символа из директории templates_dir
     void startCorelateLicencePlates(const std::string& plates_dir,
                                     const std::string& templates_dir);
-    // Выполняет корреляцию двух изображений
-    void correlationLicencePlates(const std::string& plate_path,
-                                  const std::string& template_path);
+    // Выполняет поиск на изображении image_path по шаблону template_path
+    cv::Mat findByTemplate(const std::string& image_path,
+                           const std::string& template_path);
+    // Вычитает среднее значение из изображения и шаблона для увеличения робастности
+    void substractMeanValue(cv::Mat& image, cv::Mat& temp);
     // Инициализирует изображения необходимого размера со значениями комплексного типа 
     void initCorrelationDFT(cv::Mat& plate,
                             cv::Mat& temp,
@@ -91,6 +93,11 @@ namespace PIPELINE {
                             cv::Mat& temp_complex);
     // Восстанавливает исходный размер номера
     void restoreSize(cv::Mat& result, cv::Mat& src);
+
+////////////////////////////////////////////////////////////////////////////
+
+    void eyeFourier(const std::string& fourier_path,
+                       const std::string& eye_path);
 }
 
 #endif //PIPELINE_H

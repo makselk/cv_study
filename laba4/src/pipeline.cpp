@@ -355,49 +355,59 @@ void PIPELINE::startCorelateLicencePlates(const std::string& plates_dir,
 
     for(auto &plate: plates_paths) {
         for(auto &temp: templates_paths)
-        correlationLicencePlates(plate, temp);
+        findByTemplate(plate, temp);
     }
 }
 
-void PIPELINE::correlationLicencePlates(const std::string& plate_path,
-                                        const std::string& template_path) {
+cv::Mat PIPELINE::findByTemplate(const std::string& image_path,
+                                 const std::string& template_path) {
     // Чтение номера и шаблона символа
-    cv::Mat plate = cv::imread(plate_path, cv::IMREAD_GRAYSCALE);
+    cv::Mat image = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
     cv::Mat temp = cv::imread(template_path, cv::IMREAD_GRAYSCALE);
-
+    // Сохраняем исходники для визулизации
+    cv::Mat image_src = image.clone();
+    cv::Mat temp_src = temp.clone();
+    // Перевод в float и нормализация
+    image.convertTo(image, CV_32F);
+    temp.convertTo(temp, CV_32F);
+    cv::normalize(image, image, 0,1, cv::NORM_MINMAX);
+    cv::normalize(temp, temp, 0,1, cv::NORM_MINMAX);
+    // Вычитаем среднее значение из изображения и шаблона
+    substractMeanValue(image, temp);
     // Перевод в комплексное представление и сопоставление размеров
-    cv::Mat plate_complex, temp_complex;
-    initCorrelationDFT(plate, temp, plate_complex, temp_complex);
-
+    cv::Mat image_complex, temp_complex;
+    initCorrelationDFT(image, temp, image_complex, temp_complex);
     // Преобразование фурье
-    cv::Mat plate_fourier, temp_fourier;
-    cv::dft(plate_complex, plate_fourier);
+    cv::Mat image_fourier, temp_fourier;
+    cv::dft(image_complex, image_fourier);
     cv::dft(temp_complex, temp_fourier);
-
     // Корреляция
     cv::Mat cor_fourier;
-    cv::mulSpectrums(plate_fourier, temp_fourier, cor_fourier, 0, true);
-
+    cv::mulSpectrums(image_fourier, temp_fourier, cor_fourier, 0, true);
     // Обратное преобразование
     cv::Mat cor_result;
     cv::idft(cor_fourier, cor_result, cv::DFT_SCALE | cv::DFT_REAL_OUTPUT);
-
     // Восстанавливаем размеры (обрезаем)
-    restoreSize(cor_result, plate);
-
+    restoreSize(cor_result, image_src);
     // Нормализация, чтоб было видно
     cv::normalize(cor_result, cor_result, 0.f, 1.f, cv::NORM_MINMAX);
-
     // Пороговая фильтрация по "небольшому числу"
     cv::Mat result_thresh;
     cv::threshold(cor_result, result_thresh, 0.99f, 1.0f, cv::THRESH_BINARY);
-
     // Показ
-    cv::imshow("Plate", plate);
-    cv::imshow("Symbol", temp);
+    cv::imshow("Image", image_src);
+    cv::imshow("Template", temp_src);
     cv::imshow("Mul", cor_result);
     cv::imshow("Result", result_thresh);
-    cv::waitKey(0);
+    //cv::waitKey(0);
+    return result_thresh;
+}
+
+void PIPELINE::substractMeanValue(cv::Mat& image, cv::Mat& temp) {
+    cv::Scalar mean_image = cv::mean(image);
+    cv::Scalar mean_template = cv::mean(temp);
+    cv::subtract(image, mean_image, image);
+    cv::subtract(temp, mean_template, temp);
 }
 
 void PIPELINE::initCorrelationDFT(cv::Mat& plate,
@@ -408,11 +418,9 @@ void PIPELINE::initCorrelationDFT(cv::Mat& plate,
     cv::Size common_size = plate.size() + temp.size();
     cv::Mat plate_ = cv::Mat::zeros(common_size, plate.type());
     cv::Mat temp_ = cv::Mat::zeros(common_size, temp.type());
-    
     // Размещаем исходники в верхнем левом углу
     plate.copyTo(plate_(cv::Rect(0, 0, plate.cols, plate.rows)));
     temp.copyTo(temp_(cv::Rect(0, 0, temp.cols, temp.rows)));
-
     // Переход в комплексное пространство
     plate_complex = toCvComplex(plate_);
     temp_complex = toCvComplex(temp_);
@@ -421,4 +429,20 @@ void PIPELINE::initCorrelationDFT(cv::Mat& plate,
 void PIPELINE::restoreSize(cv::Mat& result, cv::Mat& src) {
     cv::Mat result_ = result(cv::Rect(0,0, src.cols, src.rows)).clone();
     result = result_;
+}
+
+
+void PIPELINE::eyeFourier(const std::string& fourier_path,
+                          const std::string& eye_path) {
+    cv::Mat image = cv::imread(fourier_path);
+    cv::Mat temp = cv::imread(eye_path);
+    cv::Mat out = findByTemplate(fourier_path, eye_path);
+    cv::Point max_loc;
+    cv::minMaxLoc(out, NULL, NULL, NULL, &max_loc);
+    cv::rectangle(image, 
+                  cv::Rect(max_loc, cv::Point(max_loc.x + temp.cols,
+                                              max_loc.y + temp.rows)),
+                  cv::Scalar(0,255,0), 2);
+    cv::imshow("Rectangle", image);
+    cv::waitKey(0);
 }
